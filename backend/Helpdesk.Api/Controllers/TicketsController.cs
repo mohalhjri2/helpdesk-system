@@ -152,4 +152,47 @@ public class TicketsController : ControllerBase
         );
     }
 
+    // PATCH /api/tickets/{id}/status
+    [HttpPatch("{id:int}/status")]
+    public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateTicketStatusDto dto)
+    {
+        var ticket = await _db.Tickets
+            .Include(t => t.Comments)
+            .FirstOrDefaultAsync(t => t.Id == id);
+
+        if (ticket is null)
+            return NotFound(new { message = "Ticket not found." });
+
+        var newStatus = dto.Status;
+        var currentStatus = ticket.Status;
+
+        if (newStatus == currentStatus)
+            return Ok(new { message = "Status unchanged.", status = ticket.Status });
+
+        var allowed = (currentStatus, newStatus) switch
+        {
+            (TicketStatus.Open, TicketStatus.InProgress) => true,
+            (TicketStatus.Open, TicketStatus.Closed) => true,
+            (TicketStatus.InProgress, TicketStatus.Closed) => true,
+            _ => false
+        };
+
+        if (!allowed)
+            return Conflict(new { message = $"Invalid status transition: {currentStatus} => {newStatus}." });
+
+        if (newStatus == TicketStatus.Closed && ticket.Comments.Count == 0)
+            return Conflict(new { message = "Cannot close a ticket without at least one comment." });
+
+        ticket.Status = newStatus;
+        await _db.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Status updated.",
+            ticket.Id,
+            ticket.Status,
+            ticket.UpdatedAt
+        });
+    }
+
 }
