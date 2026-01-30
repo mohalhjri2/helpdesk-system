@@ -14,26 +14,26 @@ public class TicketsController : ControllerBase
     public TicketsController(AppDbContext db) => _db = db;
 
     // GET /api/tickets
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<TicketListItemDto>>> GetAll()
-    {
-        var tickets = await _db.Tickets
-            .AsNoTracking()
-            .OrderByDescending(t => t.CreatedAt)
-            .Select(t => new TicketListItemDto(
-                t.Id,
-                t.Title,
-                t.Category,
-                t.Priority,
-                t.Status,
-                t.CreatedAt,
-                t.UpdatedAt,
-                t.Comments.Count
-            ))
-            .ToListAsync();
+    // [HttpGet]
+    // public async Task<ActionResult<IEnumerable<TicketListItemDto>>> GetAll()
+    // {
+    //     var tickets = await _db.Tickets
+    //         .AsNoTracking()
+    //         .OrderByDescending(t => t.CreatedAt)
+    //         .Select(t => new TicketListItemDto(
+    //             t.Id,
+    //             t.Title,
+    //             t.Category,
+    //             t.Priority,
+    //             t.Status,
+    //             t.CreatedAt,
+    //             t.UpdatedAt,
+    //             t.Comments.Count
+    //         ))
+    //         .ToListAsync();
 
-        return Ok(tickets);
-    }
+    //     return Ok(tickets);
+    // }
 
     // GET /api/tickets/{id}
     [HttpGet("{id:int}")]
@@ -208,6 +208,63 @@ public class TicketsController : ControllerBase
         await _db.SaveChangesAsync();
 
         return NoContent();
+    }
+    // GET /api/tickets?status=&priority=&category=&search=&sort=
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<TicketListItemDto>>> GetAll(
+        [FromQuery] TicketStatus? status,
+        [FromQuery] TicketPriority? priority,
+        [FromQuery] TicketCategory? category,
+        [FromQuery] string? search,
+        [FromQuery] string? sort
+    )
+    {
+        var query = _db.Tickets
+            .AsNoTracking()
+            .AsQueryable();
+
+        // Filters
+        if (status.HasValue)
+            query = query.Where(t => t.Status == status.Value);
+
+        if (priority.HasValue)
+            query = query.Where(t => t.Priority == priority.Value);
+
+        if (category.HasValue)
+            query = query.Where(t => t.Category == category.Value);
+
+        // Search (Title + Description)
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim().ToLower();
+            query = query.Where(t =>
+                t.Title.ToLower().Contains(s) ||
+                t.Description.ToLower().Contains(s)
+            );
+        }
+
+        // Sorting
+        query = (sort?.Trim().ToLower()) switch
+        {
+            "oldest" => query.OrderBy(t => t.CreatedAt),
+            _ => query.OrderByDescending(t => t.CreatedAt) // default: newest
+        };
+
+        // Projection
+        var tickets = await query
+            .Select(t => new TicketListItemDto(
+                t.Id,
+                t.Title,
+                t.Category,
+                t.Priority,
+                t.Status,
+                t.CreatedAt,
+                t.UpdatedAt,
+                t.Comments.Count
+            ))
+            .ToListAsync();
+
+        return Ok(tickets);
     }
 
 }
