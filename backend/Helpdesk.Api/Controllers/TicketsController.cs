@@ -195,4 +195,19 @@ public class TicketsController : ControllerBase
         });
     }
 
+    // DELETE /api/tickets/{id}
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var ticket = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
+
+        if (ticket is null)
+            return NotFound(new { message = "Ticket not found." });
+
+        _db.Tickets.Remove(ticket);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
 }
