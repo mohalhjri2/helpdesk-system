@@ -92,4 +92,64 @@ public class TicketsController : ControllerBase
             ticket.UpdatedAt
         });
     }
+    // GET /api/tickets/{id}/comments
+    [HttpGet("{id:int}/comments")]
+    public async Task<IActionResult> GetComments(int id)
+    {
+        var ticketExists = await _db.Tickets
+            .AsNoTracking()
+            .AnyAsync(t => t.Id == id);
+
+        if (!ticketExists)
+            return NotFound(new { message = "Ticket not found." });
+
+        var comments = await _db.Comments
+            .AsNoTracking()
+            .Where(c => c.TicketId == id)
+            .OrderBy(c => c.CreatedAt)
+            .Select(c => new
+            {
+                c.Id,
+                c.TicketId,
+                c.Message,
+                c.CreatedAt
+            })
+            .ToListAsync();
+
+        return Ok(comments);
+    }
+    // POST /api/tickets/{id}/comments
+    [HttpPost("{id:int}/comments")]
+    public async Task<IActionResult> AddComment(int id, [FromBody] CreateCommentDto dto)
+    {
+        var ticket = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
+
+        if (ticket is null)
+            return NotFound(new { message = "Ticket not found." });
+
+        if (ticket.Status == TicketStatus.Closed)
+            return Conflict(new { message = "Cannot add comments to a closed ticket." });
+
+        var comment = new Comment
+        {
+            TicketId = id,
+            Message = dto.Message.Trim()
+        };
+
+        _db.Comments.Add(comment);
+        await _db.SaveChangesAsync();
+
+        return CreatedAtAction(
+            nameof(GetComments),
+            new { id },
+            new
+            {
+                comment.Id,
+                comment.TicketId,
+                comment.Message,
+                comment.CreatedAt
+            }
+        );
+    }
+
 }
