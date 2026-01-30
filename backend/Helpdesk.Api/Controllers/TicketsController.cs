@@ -1,5 +1,6 @@
 using Helpdesk.Api.Data;
 using Helpdesk.Api.Dtos;
+using Helpdesk.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -61,5 +62,34 @@ public class TicketsController : ControllerBase
         );
 
         return Ok(dto);
+    }
+
+    // POST /api/tickets
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateTicketDto dto)
+    {
+        var ticket = new Ticket
+        {
+            Title = dto.Title.Trim(),
+            Description = dto.Description.Trim(),
+            Category = dto.Category,
+            Priority = dto.Priority,
+            Status = TicketStatus.Open
+        };
+
+        _db.Tickets.Add(ticket);
+        await _db.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetById), new { id = ticket.Id }, new
+        {
+            ticket.Id,
+            ticket.Title,
+            ticket.Description,
+            ticket.Category,
+            ticket.Priority,
+            ticket.Status,
+            ticket.CreatedAt,
+            ticket.UpdatedAt
+        });
     }
 }
