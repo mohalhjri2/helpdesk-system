@@ -6,11 +6,14 @@ public class Ticket
 {
     public int Id { get; set; }
 
-    [Required, MaxLength(200)]
+    [Required, MinLength(5), MaxLength(100)]
     public string Title { get; set; } = string.Empty;
 
-    [Required, MaxLength(2000)]
+    [Required, MinLength(10), MaxLength(2000)]
     public string Description { get; set; } = string.Empty;
+
+    [Required, MinLength(2), MaxLength(100)]
+    public string CreatedBy { get; set; } = string.Empty;
 
     public TicketCategory Category { get; set; }
     public TicketPriority Priority { get; set; }

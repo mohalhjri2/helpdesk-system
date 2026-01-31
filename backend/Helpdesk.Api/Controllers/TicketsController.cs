@@ -13,28 +13,6 @@ public class TicketsController : ControllerBase
     private readonly AppDbContext _db;
     public TicketsController(AppDbContext db) => _db = db;
 
-    // GET /api/tickets
-    // [HttpGet]
-    // public async Task<ActionResult<IEnumerable<TicketListItemDto>>> GetAll()
-    // {
-    //     var tickets = await _db.Tickets
-    //         .AsNoTracking()
-    //         .OrderByDescending(t => t.CreatedAt)
-    //         .Select(t => new TicketListItemDto(
-    //             t.Id,
-    //             t.Title,
-    //             t.Category,
-    //             t.Priority,
-    //             t.Status,
-    //             t.CreatedAt,
-    //             t.UpdatedAt,
-    //             t.Comments.Count
-    //         ))
-    //         .ToListAsync();
-
-    //     return Ok(tickets);
-    // }
-
     // GET /api/tickets/{id}
     [HttpGet("{id:int}")]
     public async Task<ActionResult<TicketDetailsDto>> GetById(int id)
@@ -44,12 +22,14 @@ public class TicketsController : ControllerBase
             .Include(t => t.Comments)
             .FirstOrDefaultAsync(t => t.Id == id);
 
-        if (ticket is null) return NotFound(new { message = "Ticket not found." });
+        if (ticket is null)
+            return NotFound(new { message = "Ticket not found." });
 
         var dto = new TicketDetailsDto(
             ticket.Id,
             ticket.Title,
             ticket.Description,
+            ticket.CreatedBy,
             ticket.Category,
             ticket.Priority,
             ticket.Status,
@@ -57,7 +37,13 @@ public class TicketsController : ControllerBase
             ticket.UpdatedAt,
             ticket.Comments
                 .OrderBy(c => c.CreatedAt)
-                .Select(c => new CommentDto(c.Id, c.TicketId, c.Message, c.CreatedAt))
+                .Select(c => new CommentDto(
+                    c.Id,
+                    c.TicketId,
+                    c.Author,
+                    c.Message,
+                    c.CreatedAt
+                ))
                 .ToList()
         );
 
@@ -68,10 +54,14 @@ public class TicketsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateTicketDto dto)
     {
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
+
         var ticket = new Ticket
         {
             Title = dto.Title.Trim(),
             Description = dto.Description.Trim(),
+            CreatedBy = dto.CreatedBy.Trim(),
             Category = dto.Category,
             Priority = dto.Priority,
             Status = TicketStatus.Open
@@ -85,6 +75,7 @@ public class TicketsController : ControllerBase
             ticket.Id,
             ticket.Title,
             ticket.Description,
+            ticket.CreatedBy,
             ticket.Category,
             ticket.Priority,
             ticket.Status,
@@ -92,6 +83,7 @@ public class TicketsController : ControllerBase
             ticket.UpdatedAt
         });
     }
+
     // GET /api/tickets/{id}/comments
     [HttpGet("{id:int}/comments")]
     public async Task<IActionResult> GetComments(int id)
@@ -107,21 +99,25 @@ public class TicketsController : ControllerBase
             .AsNoTracking()
             .Where(c => c.TicketId == id)
             .OrderBy(c => c.CreatedAt)
-            .Select(c => new
-            {
+            .Select(c => new CommentDto(
                 c.Id,
                 c.TicketId,
+                c.Author,
                 c.Message,
                 c.CreatedAt
-            })
+            ))
             .ToListAsync();
 
         return Ok(comments);
     }
+
     // POST /api/tickets/{id}/comments
     [HttpPost("{id:int}/comments")]
     public async Task<IActionResult> AddComment(int id, [FromBody] CreateCommentDto dto)
     {
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
+
         var ticket = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == id);
 
         if (ticket is null)
@@ -133,6 +129,7 @@ public class TicketsController : ControllerBase
         var comment = new Comment
         {
             TicketId = id,
+            Author = dto.Author.Trim(),
             Message = dto.Message.Trim()
         };
 
@@ -142,13 +139,7 @@ public class TicketsController : ControllerBase
         return CreatedAtAction(
             nameof(GetComments),
             new { id },
-            new
-            {
-                comment.Id,
-                comment.TicketId,
-                comment.Message,
-                comment.CreatedAt
-            }
+            new CommentDto(comment.Id, comment.TicketId, comment.Author, comment.Message, comment.CreatedAt)
         );
     }
 
@@ -156,6 +147,9 @@ public class TicketsController : ControllerBase
     [HttpPatch("{id:int}/status")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateTicketStatusDto dto)
     {
+        if (!ModelState.IsValid)
+            return ValidationProblem(ModelState);
+
         var ticket = await _db.Tickets
             .Include(t => t.Comments)
             .FirstOrDefaultAsync(t => t.Id == id);
@@ -169,11 +163,20 @@ public class TicketsController : ControllerBase
         if (newStatus == currentStatus)
             return Ok(new { message = "Status unchanged.", status = ticket.Status });
 
+        // Spec transitions:
+        // Open -> InProgress -> Closed
+        // InProgress -> Open (reopen)
+        // Closed -> Open (reopen)
+        // Closed -> InProgress NOT allowed
         var allowed = (currentStatus, newStatus) switch
         {
             (TicketStatus.Open, TicketStatus.InProgress) => true,
-            (TicketStatus.Open, TicketStatus.Closed) => true,
+
+            (TicketStatus.InProgress, TicketStatus.Open) => true,
             (TicketStatus.InProgress, TicketStatus.Closed) => true,
+
+            (TicketStatus.Closed, TicketStatus.Open) => true,
+
             _ => false
         };
 
@@ -209,6 +212,7 @@ public class TicketsController : ControllerBase
 
         return NoContent();
     }
+
     // GET /api/tickets?status=&priority=&category=&search=&sort=
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TicketListItemDto>>> GetAll(
@@ -236,10 +240,12 @@ public class TicketsController : ControllerBase
         // Search (Title + Description)
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var s = search.Trim().ToLower();
+            var s = search.Trim();
+
+            // Postgres friendly case-insensitive match
             query = query.Where(t =>
-                t.Title.ToLower().Contains(s) ||
-                t.Description.ToLower().Contains(s)
+                EF.Functions.ILike(t.Title, $"%{s}%") ||
+                EF.Functions.ILike(t.Description, $"%{s}%")
             );
         }
 
@@ -255,6 +261,7 @@ public class TicketsController : ControllerBase
             .Select(t => new TicketListItemDto(
                 t.Id,
                 t.Title,
+                t.CreatedBy,
                 t.Category,
                 t.Priority,
                 t.Status,
@@ -266,5 +273,4 @@ public class TicketsController : ControllerBase
 
         return Ok(tickets);
     }
-
 }

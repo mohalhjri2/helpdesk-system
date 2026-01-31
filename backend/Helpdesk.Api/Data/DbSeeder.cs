@@ -13,6 +13,7 @@ public static class DbSeeder
         {
             Title = "Cannot login to dashboard",
             Description = "User receives invalid credentials error although password is correct.",
+            CreatedBy = "Mohammed",
             Category = TicketCategory.IT,
             Priority = TicketPriority.High,
             Status = TicketStatus.Open
@@ -22,6 +23,7 @@ public static class DbSeeder
         {
             Title = "Air conditioning issue in meeting room",
             Description = "AC not cooling properly in meeting room 3.",
+            CreatedBy = "Aisha",
             Category = TicketCategory.Facilities,
             Priority = TicketPriority.Medium,
             Status = TicketStatus.InProgress
@@ -31,6 +33,7 @@ public static class DbSeeder
         {
             Title = "Request: Add new user role",
             Description = "Need a new role for contractor access with limited permissions.",
+            CreatedBy = "Sameer",
             Category = TicketCategory.General,
             Priority = TicketPriority.Low,
             Status = TicketStatus.Open
@@ -40,6 +43,7 @@ public static class DbSeeder
         {
             Title = "Printer not working on floor 5",
             Description = "Printer shows paper jam error even after clearing tray.",
+            CreatedBy = "Fatma",
             Category = TicketCategory.Facilities,
             Priority = TicketPriority.Medium,
             Status = TicketStatus.Open
@@ -49,6 +53,7 @@ public static class DbSeeder
         {
             Title = "API timeout when submitting form",
             Description = "Submission occasionally fails with timeout after 30 seconds.",
+            CreatedBy = "Ankit",
             Category = TicketCategory.IT,
             Priority = TicketPriority.High,
             Status = TicketStatus.Open
@@ -58,9 +63,24 @@ public static class DbSeeder
         await db.SaveChangesAsync();
 
         db.Comments.AddRange(
-            new Comment { TicketId = t2.Id, Message = "Technician assigned, investigating root cause." },
-            new Comment { TicketId = t2.Id, Message = "Temporary fix applied; monitoring performance." },
-            new Comment { TicketId = t5.Id, Message = "Can you share the steps to reproduce + timestamp?" }
+            new Comment
+            {
+                TicketId = t2.Id,
+                Author = "Support Agent",
+                Message = "Technician assigned, investigating root cause."
+            },
+            new Comment
+            {
+                TicketId = t2.Id,
+                Author = "Support Agent",
+                Message = "Temporary fix applied; monitoring performance."
+            },
+            new Comment
+            {
+                TicketId = t5.Id,
+                Author = "Support Agent",
+                Message = "Can you share the steps to reproduce + timestamp?"
+            }
         );
 
         await db.SaveChangesAsync();
