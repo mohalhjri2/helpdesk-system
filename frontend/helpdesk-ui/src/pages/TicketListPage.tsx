@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getTickets, type TicketQuery } from "../services/tickets";
+import TicketDetailsPage from "./TicketDetailsPage";
 import type { TicketListItem, TicketStatus, TicketPriority, TicketCategory } from "../types/ticket";
 
 const statusLabel = (s: TicketStatus) => (s === 0 ? "Open" : s === 1 ? "In Progress" : "Closed");
@@ -10,6 +11,7 @@ export default function TicketListPage() {
     const [tickets, setTickets] = useState<TicketListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedId, setSelectedId] = useState<number | null>(null);
 
     // Filters/search
     const [status, setStatus] = useState<string>("");
@@ -48,6 +50,10 @@ export default function TicketListPage() {
             cancelled = true;
         };
     }, [query]);
+
+    if (selectedId !== null) {
+        return <TicketDetailsPage ticketId={selectedId} onBack={() => setSelectedId(null)} />;
+    }
 
     return (
         <div style={{ padding: 24, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto" }}>
@@ -109,7 +115,11 @@ export default function TicketListPage() {
                         </thead>
                         <tbody>
                             {tickets.map((t) => (
-                                <tr key={t.id} style={{ borderTop: "1px solid #eee" }}>
+                                <tr
+                                    key={t.id}
+                                    onClick={() => setSelectedId(t.id)}
+                                    style={{ borderTop: "1px solid #eee", cursor: "pointer" }}
+                                >
                                     <td style={{ padding: 12 }}>{t.title}</td>
                                     <td style={{ padding: 12 }}>{categoryLabel(t.category)}</td>
                                     <td style={{ padding: 12 }}>{priorityLabel(t.priority)}</td>
