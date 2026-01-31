@@ -1,5 +1,11 @@
 import { api } from "./api";
-import type { TicketCategory, TicketPriority, TicketStatus, TicketListItem } from "../types/ticket";
+import type {
+    TicketCategory,
+    TicketPriority,
+    TicketStatus,
+    TicketListItem,
+    TicketDetails,
+} from "../types/ticket";
 
 export type TicketQuery = {
     status?: TicketStatus;
@@ -12,8 +18,14 @@ export type TicketQuery = {
 export type CreateTicketPayload = {
     title: string;
     description: string;
+    createdBy: string;
     category: TicketCategory;
     priority: TicketPriority;
+};
+
+export type CreateCommentPayload = {
+    author: string;
+    message: string;
 };
 
 export async function getTickets(query: TicketQuery = {}) {
@@ -23,11 +35,11 @@ export async function getTickets(query: TicketQuery = {}) {
 
 export async function createTicket(payload: CreateTicketPayload) {
     const res = await api.post("/api/tickets", payload);
-    return res.data; // contains id + fields
+    return res.data;
 }
 
 export async function getTicketDetails(id: number) {
-    const res = await api.get(`/api/tickets/${id}`);
+    const res = await api.get<TicketDetails>(`/api/tickets/${id}`);
     return res.data;
 }
 
@@ -36,7 +48,7 @@ export async function updateTicketStatus(id: number, status: TicketStatus) {
     return res.data;
 }
 
-export async function addTicketComment(id: number, message: string) {
-    const res = await api.post(`/api/tickets/${id}/comments`, { message });
+export async function addTicketComment(id: number, payload: CreateCommentPayload) {
+    const res = await api.post(`/api/tickets/${id}/comments`, payload);
     return res.data;
 }

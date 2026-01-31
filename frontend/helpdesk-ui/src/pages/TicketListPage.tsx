@@ -42,7 +42,7 @@ export default function TicketListPage() {
                 const data = await getTickets(query);
                 if (!cancelled) setTickets(data);
             } catch (e: any) {
-                if (!cancelled) setError(e?.message ?? "Failed to load tickets");
+                if (!cancelled) setError(e?.response?.data?.message ?? e?.message ?? "Failed to load tickets");
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -87,7 +87,8 @@ export default function TicketListPage() {
     return (
         <div style={{ padding: 24, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto" }}>
             <h1 style={{ marginBottom: 12 }}>Tickets</h1>
-            <button onClick={() => setMode("create")} style={{ padding: "10px 14px" }}>
+
+            <button onClick={() => setMode("create")} style={{ padding: "10px 14px", marginBottom: 12 }}>
                 + Create Ticket
             </button>
 
@@ -127,17 +128,16 @@ export default function TicketListPage() {
                 </select>
             </div>
 
-            {/* States */}
             {loading && <p>Loading...</p>}
             {error && <p style={{ color: "crimson" }}>{error}</p>}
 
-            {/* Table */}
             {!loading && !error && (
                 <div style={{ border: "1px solid #ddd", borderRadius: 8, overflow: "hidden" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
                         <thead style={{ background: "#f7f7f7" }}>
                             <tr>
                                 <th style={{ textAlign: "left", padding: 12 }}>Title</th>
+                                <th style={{ textAlign: "left", padding: 12 }}>Created By</th>
                                 <th style={{ textAlign: "left", padding: 12 }}>Category</th>
                                 <th style={{ textAlign: "left", padding: 12 }}>Priority</th>
                                 <th style={{ textAlign: "left", padding: 12 }}>Status</th>
@@ -156,6 +156,7 @@ export default function TicketListPage() {
                                     style={{ borderTop: "1px solid #eee", cursor: "pointer" }}
                                 >
                                     <td style={{ padding: 12 }}>{t.title}</td>
+                                    <td style={{ padding: 12 }}>{t.createdBy}</td>
                                     <td style={{ padding: 12 }}>{categoryLabel(t.category)}</td>
                                     <td style={{ padding: 12 }}>{priorityLabel(t.priority)}</td>
                                     <td style={{ padding: 12 }}>{statusLabel(t.status)}</td>
@@ -165,7 +166,7 @@ export default function TicketListPage() {
                             ))}
                             {tickets.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} style={{ padding: 12 }}>
+                                    <td colSpan={7} style={{ padding: 12 }}>
                                         No tickets found.
                                     </td>
                                 </tr>

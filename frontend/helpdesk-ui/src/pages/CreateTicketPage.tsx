@@ -9,6 +9,7 @@ export default function CreateTicketPage({
     onCreated: (newId: number) => void;
     onCancel: () => void;
 }) {
+    const [createdBy, setCreatedBy] = useState("");
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [category, setCategory] = useState<TicketCategory>(0);
@@ -17,24 +18,39 @@ export default function CreateTicketPage({
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const titleOk = title.trim().length > 0 && title.trim().length <= 200;
-    const descOk = description.trim().length > 0 && description.trim().length <= 2000;
-    const canSubmit = titleOk && descOk && !submitting;
+    const createdByTrim = createdBy.trim();
+    const titleTrim = title.trim();
+    const descTrim = description.trim();
+
+    const createdByOk = createdByTrim.length >= 2 && createdByTrim.length <= 100;
+    const titleOk = titleTrim.length >= 5 && titleTrim.length <= 100;
+    const descOk = descTrim.length >= 10 && descTrim.length <= 2000;
+
+    const canSubmit = createdByOk && titleOk && descOk && !submitting;
+
+    function validationMessage() {
+        if (!createdByOk) return "Created By is required.";
+        if (!titleOk) return "Title is required.";
+        if (!descOk) return "Description is required.";
+        return null;
+    }
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError(null);
 
-        if (!canSubmit) {
-            setError("Please fill in Title and Description (within limits).");
+        const msg = validationMessage();
+        if (msg) {
+            setError(msg);
             return;
         }
 
         try {
             setSubmitting(true);
             const created = await createTicket({
-                title: title.trim(),
-                description: description.trim(),
+                createdBy: createdByTrim,
+                title: titleTrim,
+                description: descTrim,
                 category,
                 priority,
             });
@@ -53,13 +69,26 @@ export default function CreateTicketPage({
 
             <form onSubmit={handleSubmit} style={{ maxWidth: 700, display: "grid", gap: 12 }}>
                 <label>
+                    <div style={{ marginBottom: 6 }}>Created By</div>
+                    <input
+                        value={createdBy}
+                        onChange={(e) => setCreatedBy(e.target.value)}
+                        style={{ width: "100%", padding: 10 }}
+                        maxLength={100}
+                        placeholder="Your name"
+                    />
+                    <small style={{ color: "#777" }}>2–100 characters</small>
+                </label>
+
+                <label>
                     <div style={{ marginBottom: 6 }}>Title</div>
                     <input
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         style={{ width: "100%", padding: 10 }}
-                        maxLength={200}
+                        maxLength={100}
                     />
+                    <small style={{ color: "#777" }}>5–100 characters</small>
                 </label>
 
                 <label>
@@ -70,6 +99,7 @@ export default function CreateTicketPage({
                         style={{ width: "100%", padding: 10, minHeight: 120 }}
                         maxLength={2000}
                     />
+                    <small style={{ color: "#777" }}>10–2000 characters</small>
                 </label>
 
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>

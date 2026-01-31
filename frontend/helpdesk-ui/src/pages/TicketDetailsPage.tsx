@@ -1,35 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-    addTicketComment,
-    getTicketDetails,
-    updateTicketStatus,
-} from "../services/tickets";
-import type { TicketStatus } from "../types/ticket";
+import { addTicketComment, getTicketDetails, updateTicketStatus } from "../services/tickets";
+import type { TicketDetails, TicketStatus, TicketPriority, TicketCategory } from "../types/ticket";
 
-type Comment = {
-    id: number;
-    ticketId: number;
-    message: string;
-    createdAt: string;
-};
+const statusLabel = (s: TicketStatus) => (s === 0 ? "Open" : s === 1 ? "In Progress" : "Closed");
+const priorityLabel = (p: TicketPriority) => (p === 0 ? "Low" : p === 1 ? "Medium" : "High");
+const categoryLabel = (c: TicketCategory) => (c === 0 ? "IT" : c === 1 ? "Facilities" : "General");
 
-type TicketDetails = {
-    id: number;
-    title: string;
-    description: string;
-    category: number;
-    priority: number;
-    status: number;
-    createdAt: string;
-    updatedAt: string;
-    comments: Comment[];
-};
-
-const statusLabel = (s: number) => (s === 0 ? "Open" : s === 1 ? "In Progress" : "Closed");
-const priorityLabel = (p: number) => (p === 0 ? "Low" : p === 1 ? "Medium" : "High");
-const categoryLabel = (c: number) => (c === 0 ? "IT" : c === 1 ? "Facilities" : "General");
-
-function statusBadgeStyle(status: number): React.CSSProperties {
+function statusBadgeStyle(status: TicketStatus): React.CSSProperties {
     const base: React.CSSProperties = {
         display: "inline-block",
         padding: "6px 10px",
@@ -58,6 +35,8 @@ export default function TicketDetailsPage({
     const [error, setError] = useState<string | null>(null);
 
     const [statusUpdating, setStatusUpdating] = useState(false);
+
+    const [commentAuthor, setCommentAuthor] = useState("");
     const [commentText, setCommentText] = useState("");
     const [commentSubmitting, setCommentSubmitting] = useState(false);
 
@@ -76,29 +55,26 @@ export default function TicketDetailsPage({
 
     useEffect(() => {
         load();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ticketId]);
 
     const commentCount = ticket?.comments?.length ?? 0;
 
-    // Valid transitions (must match backend rules)
     const allowedNextStatuses = useMemo(() => {
         if (!ticket) return [] as TicketStatus[];
         const current = ticket.status;
 
-        // 0 Open, 1 InProgress, 2 Closed
-        if (current === 0) return [1, 2] as TicketStatus[];
-        if (current === 1) return [2] as TicketStatus[];
+        if (current === 0) return [1] as TicketStatus[];         // Open -> InProgress
+        if (current === 1) return [0, 2] as TicketStatus[];      // InProgress -> Open or Closed
+        if (current === 2) return [0] as TicketStatus[];         // Closed -> Open
         return [] as TicketStatus[];
     }, [ticket]);
 
-    const canClose = commentCount > 0; // UI rule aligns with backend rule
+    const canClose = commentCount > 0;
     const canAddComment = ticket?.status !== 2;
 
     async function handleStatusChange(next: TicketStatus) {
         if (!ticket) return;
 
-        // UI guard (backend also enforces)
         if (next === 2 && !canClose) {
             setError("Cannot close a ticket without at least one comment.");
             return;
@@ -109,7 +85,6 @@ export default function TicketDetailsPage({
         try {
             await updateTicketStatus(ticket.id, next);
             onChanged();
-            setCommentText("");
             await load();
         } catch (e: any) {
             setError(e?.response?.data?.message ?? e?.message ?? "Failed to update status.");
@@ -120,15 +95,26 @@ export default function TicketDetailsPage({
 
     async function handleAddComment() {
         if (!ticket) return;
+
+        const author = commentAuthor.trim();
         const msg = commentText.trim();
-        if (!msg) return;
+
+        if (author.length < 2 || author.length > 100) {
+            setError("Author is required and must be 2–100 characters.");
+            return;
+        }
+        if (msg.length < 2 || msg.length > 1000) {
+            setError("Comment must be 2–1000 characters.");
+            return;
+        }
 
         setError(null);
         setCommentSubmitting(true);
         try {
-            await addTicketComment(ticket.id, msg);
+            await addTicketComment(ticket.id, { author, message: msg });
+            onChanged();
             setCommentText("");
-            await load(); // refresh ticket + comments
+            await load();
         } catch (e: any) {
             setError(e?.response?.data?.message ?? e?.message ?? "Failed to add comment.");
         } finally {
@@ -158,15 +144,17 @@ export default function TicketDetailsPage({
                     <h2 style={{ margin: "0 0 6px 0" }}>{ticket.title}</h2>
                     <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                         <span style={statusBadgeStyle(ticket.status)}>{statusLabel(ticket.status)}</span>
+                        <span style={{ color: "#555" }}>Created By: {ticket.createdBy}</span>
                         <span style={{ color: "#555" }}>Category: {categoryLabel(ticket.category)}</span>
                         <span style={{ color: "#555" }}>Priority: {priorityLabel(ticket.priority)}</span>
-                        <span style={{ color: "#777" }}>
-                            Created: {new Date(ticket.createdAt).toLocaleString()}
-                        </span>
+                        <span style={{ color: "#777" }}>Created: {new Date(ticket.createdAt).toLocaleString()}</span>
                     </div>
+
+                    {(statusUpdating || commentSubmitting) && (
+                        <div style={{ marginTop: 10, color: "#777" }}>Updating...</div>
+                    )}
                 </div>
 
-                {/* Status controls */}
                 <div style={{ minWidth: 240 }}>
                     <div style={{ marginBottom: 6, fontWeight: 600 }}>Change Status</div>
 
@@ -177,7 +165,10 @@ export default function TicketDetailsPage({
                             {allowedNextStatuses.map((s) => {
                                 const isClose = s === 2;
                                 const disabled = statusUpdating || (isClose && !canClose);
-                                const label = isClose ? "Close" : "Move to In Progress";
+                                const label =
+                                    s === 1 ? "In Progress" :
+                                        s === 0 ? "Reopen" :
+                                            "Close";
 
                                 return (
                                     <button
@@ -194,7 +185,7 @@ export default function TicketDetailsPage({
                         </div>
                     )}
 
-                    {!canClose && ticket.status !== 2 && (
+                    {allowedNextStatuses.includes(2) && !canClose && (
                         <div style={{ marginTop: 8, fontSize: 12, color: "#8a5b00" }}>
                             Add at least one comment to enable closing.
                         </div>
@@ -208,23 +199,36 @@ export default function TicketDetailsPage({
 
             <hr style={{ margin: "18px 0" }} />
 
-            {/* Comments */}
             <div>
                 <h3 style={{ margin: "0 0 10px 0" }}>Comments ({commentCount})</h3>
 
-                {/* Add comment box */}
                 <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+                    <input
+                        placeholder={canAddComment ? "Author" : "Ticket is closed"}
+                        value={commentAuthor}
+                        onChange={(e) => setCommentAuthor(e.target.value)}
+                        disabled={!canAddComment || commentSubmitting}
+                        style={{ padding: 10, minWidth: 220 }}
+                        maxLength={100}
+                    />
                     <input
                         placeholder={canAddComment ? "Write a comment..." : "Ticket is closed"}
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
                         disabled={!canAddComment || commentSubmitting}
                         style={{ padding: 10, minWidth: 320, flex: 1 }}
+                        maxLength={1000}
                     />
                     <button
                         onClick={handleAddComment}
-                        disabled={!canAddComment || commentSubmitting || !commentText.trim()}
+                        disabled={
+                            !canAddComment ||
+                            commentSubmitting ||
+                            commentAuthor.trim().length < 2 ||
+                            commentText.trim().length < 2
+                        }
                         style={{ padding: "10px 12px" }}
+                        title={!canAddComment ? "Cannot add comments to a closed ticket" : ""}
                     >
                         {commentSubmitting ? "Adding..." : "Add Comment"}
                     </button>
@@ -239,10 +243,8 @@ export default function TicketDetailsPage({
                             .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
                             .map((c) => (
                                 <li key={c.id} style={{ marginBottom: 8 }}>
-                                    {c.message}{" "}
-                                    <small style={{ color: "#777" }}>
-                                        ({new Date(c.createdAt).toLocaleString()})
-                                    </small>
+                                    <strong>{c.author}:</strong> {c.message}{" "}
+                                    <small style={{ color: "#777" }}>({new Date(c.createdAt).toLocaleString()})</small>
                                 </li>
                             ))}
                     </ul>
