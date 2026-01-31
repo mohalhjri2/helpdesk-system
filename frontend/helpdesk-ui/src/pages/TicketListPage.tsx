@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getTickets, type TicketQuery } from "../services/tickets";
 import TicketDetailsPage from "./TicketDetailsPage";
+import CreateTicketPage from "./CreateTicketPage";
 import type { TicketListItem, TicketStatus, TicketPriority, TicketCategory } from "../types/ticket";
 
 const statusLabel = (s: TicketStatus) => (s === 0 ? "Open" : s === 1 ? "In Progress" : "Closed");
@@ -12,6 +13,7 @@ export default function TicketListPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedId, setSelectedId] = useState<number | null>(null);
+    const [mode, setMode] = useState<"list" | "create" | "details">("list");
 
     // Filters/search
     const [status, setStatus] = useState<string>("");
@@ -54,10 +56,28 @@ export default function TicketListPage() {
     if (selectedId !== null) {
         return <TicketDetailsPage ticketId={selectedId} onBack={() => setSelectedId(null)} />;
     }
+    if (mode === "create") {
+        return (
+            <CreateTicketPage
+                onCreated={(newId) => {
+                    setSelectedId(newId);
+                    setMode("details");
+                }}
+                onCancel={() => setMode("list")}
+            />
+        );
+    }
+
+    if (mode === "details" && selectedId !== null) {
+        return <TicketDetailsPage ticketId={selectedId} onBack={() => setMode("list")} />;
+    }
 
     return (
         <div style={{ padding: 24, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto" }}>
             <h1 style={{ marginBottom: 12 }}>Tickets</h1>
+            <button onClick={() => setMode("create")} style={{ padding: "10px 14px" }}>
+                + Create Ticket
+            </button>
 
             {/* Filters */}
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>

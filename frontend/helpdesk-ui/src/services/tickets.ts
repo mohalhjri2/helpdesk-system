@@ -9,7 +9,34 @@ export type TicketQuery = {
     sort?: "newest" | "oldest";
 };
 
+export type CreateTicketPayload = {
+    title: string;
+    description: string;
+    category: TicketCategory;
+    priority: TicketPriority;
+};
+
 export async function getTickets(query: TicketQuery = {}) {
     const res = await api.get<TicketListItem[]>("/api/tickets", { params: query });
+    return res.data;
+}
+
+export async function createTicket(payload: CreateTicketPayload) {
+    const res = await api.post("/api/tickets", payload);
+    return res.data; // contains id + fields
+}
+
+export async function getTicketDetails(id: number) {
+    const res = await api.get(`/api/tickets/${id}`);
+    return res.data;
+}
+
+export async function updateTicketStatus(id: number, status: TicketStatus) {
+    const res = await api.patch(`/api/tickets/${id}/status`, { status });
+    return res.data;
+}
+
+export async function addTicketComment(id: number, message: string) {
+    const res = await api.post(`/api/tickets/${id}/comments`, { message });
     return res.data;
 }
