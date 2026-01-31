@@ -1,4 +1,19 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {
+    Alert,
+    Box,
+    Button,
+    Container,
+    FormControl,
+    MenuItem,
+    Paper,
+    Select,
+    Stack,
+    TextField,
+    Typography,
+} from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material/Select";
+
 import { createTicket } from "../services/tickets";
 import type { TicketCategory, TicketPriority } from "../types/ticket";
 
@@ -28,20 +43,19 @@ export default function CreateTicketPage({
 
     const canSubmit = createdByOk && titleOk && descOk && !submitting;
 
-    function validationMessage() {
-        if (!createdByOk) return "Created By is required.";
-        if (!titleOk) return "Title is required.";
-        if (!descOk) return "Description is required.";
+    const helperText = useMemo(() => {
+        if (!createdByOk) return "Created By must be 2–100 characters.";
+        if (!titleOk) return "Title must be 5–100 characters.";
+        if (!descOk) return "Description must be 10–2000 characters.";
         return null;
-    }
+    }, [createdByOk, titleOk, descOk]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError(null);
 
-        const msg = validationMessage();
-        if (msg) {
-            setError(msg);
+        if (!canSubmit) {
+            setError(helperText ?? "Please complete the form.");
             return;
         }
 
@@ -54,7 +68,6 @@ export default function CreateTicketPage({
                 category,
                 priority,
             });
-
             onCreated(created.id);
         } catch (e: any) {
             setError(e?.response?.data?.message ?? e?.message ?? "Failed to create ticket.");
@@ -64,83 +77,90 @@ export default function CreateTicketPage({
     }
 
     return (
-        <div style={{ padding: 24, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto" }}>
-            <h1 style={{ marginBottom: 12 }}>Create Ticket</h1>
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+            <Paper elevation={10} sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 2, overflow: "hidden" }}>
+                {/* Header strip */}
+                <Box sx={{ px: 3, py: 2, borderBottom: "1px solid", borderColor: "grey.200" }}>
+                    <Typography variant="h4">Create Ticket</Typography>
+                </Box>
 
-            <form onSubmit={handleSubmit} style={{ maxWidth: 700, display: "grid", gap: 12 }}>
-                <label>
-                    <div style={{ marginBottom: 6 }}>Created By</div>
-                    <input
-                        value={createdBy}
-                        onChange={(e) => setCreatedBy(e.target.value)}
-                        style={{ width: "100%", padding: 10 }}
-                        maxLength={100}
-                        placeholder="Your name"
-                    />
-                    <small style={{ color: "#777" }}>2–100 characters</small>
-                </label>
+                <Box sx={{ px: 3, py: 3 }}>
+                    <form onSubmit={handleSubmit}>
+                        <Stack spacing={2} sx={{ maxWidth: 760 }}>
+                            {error && <Alert severity="error">{error}</Alert>}
 
-                <label>
-                    <div style={{ marginBottom: 6 }}>Title</div>
-                    <input
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        style={{ width: "100%", padding: 10 }}
-                        maxLength={100}
-                    />
-                    <small style={{ color: "#777" }}>5–100 characters</small>
-                </label>
+                            <TextField
+                                label="Created By"
+                                value={createdBy}
+                                onChange={(e) => setCreatedBy(e.target.value)}
+                                placeholder="Your name"
+                                inputProps={{ maxLength: 100 }}
+                                helperText="2–100 characters"
+                                error={createdBy.length > 0 && !createdByOk}
+                            />
 
-                <label>
-                    <div style={{ marginBottom: 6 }}>Description</div>
-                    <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        style={{ width: "100%", padding: 10, minHeight: 120 }}
-                        maxLength={2000}
-                    />
-                    <small style={{ color: "#777" }}>10–2000 characters</small>
-                </label>
+                            <TextField
+                                label="Title"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                inputProps={{ maxLength: 100 }}
+                                helperText="5–100 characters"
+                                error={title.length > 0 && !titleOk}
+                            />
 
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                    <label>
-                        <div style={{ marginBottom: 6 }}>Category</div>
-                        <select
-                            value={category}
-                            onChange={(e) => setCategory(Number(e.target.value) as TicketCategory)}
-                            style={{ padding: 10 }}
-                        >
-                            <option value={0}>IT</option>
-                            <option value={1}>Facilities</option>
-                            <option value={2}>General</option>
-                        </select>
-                    </label>
+                            <TextField
+                                label="Description"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                inputProps={{ maxLength: 2000 }}
+                                multiline
+                                minRows={4}
+                                helperText="10–2000 characters"
+                                error={description.length > 0 && !descOk}
+                            />
 
-                    <label>
-                        <div style={{ marginBottom: 6 }}>Priority</div>
-                        <select
-                            value={priority}
-                            onChange={(e) => setPriority(Number(e.target.value) as TicketPriority)}
-                            style={{ padding: 10 }}
-                        >
-                            <option value={0}>Low</option>
-                            <option value={1}>Medium</option>
-                            <option value={2}>High</option>
-                        </select>
-                    </label>
-                </div>
+                            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                                <FormControl fullWidth>
+                                    <Typography variant="caption" sx={{ mb: 0.5, color: "text.secondary" }}>
+                                        Category
+                                    </Typography>
+                                    <Select
+                                        value={String(category)}
+                                        onChange={(e: SelectChangeEvent) => setCategory(Number(e.target.value) as TicketCategory)}
+                                    >
+                                        <MenuItem value="0">IT</MenuItem>
+                                        <MenuItem value="1">Facilities</MenuItem>
+                                        <MenuItem value="2">General</MenuItem>
+                                    </Select>
+                                </FormControl>
 
-                {error && <div style={{ color: "crimson" }}>{error}</div>}
+                                <FormControl fullWidth>
+                                    <Typography variant="caption" sx={{ mb: 0.5, color: "text.secondary" }}>
+                                        Priority
+                                    </Typography>
+                                    <Select
+                                        value={String(priority)}
+                                        onChange={(e: SelectChangeEvent) => setPriority(Number(e.target.value) as TicketPriority)}
+                                    >
+                                        <MenuItem value="0">Low</MenuItem>
+                                        <MenuItem value="1">Medium</MenuItem>
+                                        <MenuItem value="2">High</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Stack>
 
-                <div style={{ display: "flex", gap: 10 }}>
-                    <button type="submit" disabled={!canSubmit} style={{ padding: "10px 14px" }}>
-                        {submitting ? "Creating..." : "Create"}
-                    </button>
-                    <button type="button" onClick={onCancel} style={{ padding: "10px 14px" }}>
-                        Cancel
-                    </button>
-                </div>
-            </form>
-        </div>
+                            <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ pt: 1 }}>
+                                <Button variant="outlined" onClick={onCancel}>
+                                    Cancel
+                                </Button>
+                                <Button variant="contained" type="submit" disabled={!canSubmit}>
+                                    {submitting ? "Creating…" : "Create Ticket"}
+                                </Button>
+                            </Stack>
+                        </Stack>
+                    </form>
+                </Box>
+            </Paper>
+        </Container>
     );
 }

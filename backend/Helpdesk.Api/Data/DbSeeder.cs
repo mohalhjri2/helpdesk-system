@@ -13,7 +13,7 @@ public static class DbSeeder
         {
             Title = "Cannot login to dashboard",
             Description = "User receives invalid credentials error although password is correct.",
-            CreatedBy = "Mohammed",
+            CreatedBy = "Joseph",
             Category = TicketCategory.IT,
             Priority = TicketPriority.High,
             Status = TicketStatus.Open
@@ -23,7 +23,7 @@ public static class DbSeeder
         {
             Title = "Air conditioning issue in meeting room",
             Description = "AC not cooling properly in meeting room 3.",
-            CreatedBy = "Aisha",
+            CreatedBy = "Collins",
             Category = TicketCategory.Facilities,
             Priority = TicketPriority.Medium,
             Status = TicketStatus.InProgress
@@ -33,7 +33,7 @@ public static class DbSeeder
         {
             Title = "Request: Add new user role",
             Description = "Need a new role for contractor access with limited permissions.",
-            CreatedBy = "Sameer",
+            CreatedBy = "Noah",
             Category = TicketCategory.General,
             Priority = TicketPriority.Low,
             Status = TicketStatus.Open
@@ -43,7 +43,7 @@ public static class DbSeeder
         {
             Title = "Printer not working on floor 5",
             Description = "Printer shows paper jam error even after clearing tray.",
-            CreatedBy = "Fatma",
+            CreatedBy = "Alessandra",
             Category = TicketCategory.Facilities,
             Priority = TicketPriority.Medium,
             Status = TicketStatus.Open
@@ -53,7 +53,7 @@ public static class DbSeeder
         {
             Title = "API timeout when submitting form",
             Description = "Submission occasionally fails with timeout after 30 seconds.",
-            CreatedBy = "Ankit",
+            CreatedBy = "Dennis",
             Category = TicketCategory.IT,
             Priority = TicketPriority.High,
             Status = TicketStatus.Open
