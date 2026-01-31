@@ -14,6 +14,7 @@ export default function TicketListPage() {
     const [error, setError] = useState<string | null>(null);
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [mode, setMode] = useState<"list" | "create" | "details">("list");
+    const [refreshKey, setRefreshKey] = useState(0);
 
     // Filters/search
     const [status, setStatus] = useState<string>("");
@@ -51,25 +52,36 @@ export default function TicketListPage() {
         return () => {
             cancelled = true;
         };
-    }, [query]);
+    }, [query, refreshKey]);
 
-    if (selectedId !== null) {
-        return <TicketDetailsPage ticketId={selectedId} onBack={() => setSelectedId(null)} />;
-    }
     if (mode === "create") {
         return (
             <CreateTicketPage
                 onCreated={(newId) => {
                     setSelectedId(newId);
                     setMode("details");
+                    setRefreshKey((k) => k + 1);
                 }}
-                onCancel={() => setMode("list")}
+                onCancel={() => {
+                    setMode("list");
+                    setRefreshKey((k) => k + 1);
+                }}
             />
         );
     }
 
     if (mode === "details" && selectedId !== null) {
-        return <TicketDetailsPage ticketId={selectedId} onBack={() => setMode("list")} />;
+        return (
+            <TicketDetailsPage
+                ticketId={selectedId}
+                onBack={() => {
+                    setMode("list");
+                    setSelectedId(null);
+                    setRefreshKey((k) => k + 1);
+                }}
+                onChanged={() => setRefreshKey((k) => k + 1)}
+            />
+        );
     }
 
     return (
@@ -137,7 +149,10 @@ export default function TicketListPage() {
                             {tickets.map((t) => (
                                 <tr
                                     key={t.id}
-                                    onClick={() => setSelectedId(t.id)}
+                                    onClick={() => {
+                                        setSelectedId(t.id);
+                                        setMode("details");
+                                    }}
                                     style={{ borderTop: "1px solid #eee", cursor: "pointer" }}
                                 >
                                     <td style={{ padding: 12 }}>{t.title}</td>
