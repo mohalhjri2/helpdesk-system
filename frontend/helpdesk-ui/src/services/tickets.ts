@@ -52,3 +52,8 @@ export async function addTicketComment(id: number, payload: CreateCommentPayload
     const res = await api.post(`/api/tickets/${id}/comments`, payload);
     return res.data;
 }
+
+export async function deleteTicket(id: number) {
+    const res = await api.delete(`/api/tickets/${id}`);
+    return res.data;
+}
