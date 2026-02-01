@@ -14,8 +14,8 @@ Tech stack:
 
 You need:
 - Docker & Docker Compose
-- .NET SDK
-- Node.js (LTS)
+- .NET10 SDK
+- Node.js v22 or later
 
 ---
 
@@ -35,7 +35,7 @@ docker compose version
 ---
 
 ### .NET SDK
-Install the .NET SDK used by the project.
+Install the .NET10 SDK used by the project.
 
 Verify:
 ```bash
@@ -50,7 +50,7 @@ dotnet tool install --global dotnet-ef
 ---
 
 ### Node.js
-Install Node.js (LTS).
+Install Node.js v22.
 
 Verify:
 ```bash
