@@ -77,7 +77,7 @@ export default function CreateTicketPage({
     }
 
     return (
-        <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box sx={{ py: 1 }}>
             <Paper elevation={10} sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 2, overflow: "hidden" }}>
                 {/* Header strip */}
                 <Box sx={{ px: 3, py: 2, borderBottom: "1px solid", borderColor: "grey.200" }}>
@@ -161,6 +161,6 @@ export default function CreateTicketPage({
                     </form>
                 </Box>
             </Paper>
-        </Container>
+        </Box>
     );
 }

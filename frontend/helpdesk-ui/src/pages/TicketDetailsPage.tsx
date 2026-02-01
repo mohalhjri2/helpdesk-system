@@ -162,7 +162,7 @@ export default function TicketDetailsPage({
     }
 
     return (
-        <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box sx={{ py: 1 }}>
             <Paper
                 elevation={10}
                 sx={{
@@ -416,6 +416,6 @@ export default function TicketDetailsPage({
                     </Button>
                 </DialogActions>
             </Dialog>
-        </Container>
+        </Box>
     );
 }
